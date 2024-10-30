@@ -1,1 +1,1 @@
-# Deteccion-de-Frutas---Proyecto-2-PDI
+# Deteccion_de_Frutas
