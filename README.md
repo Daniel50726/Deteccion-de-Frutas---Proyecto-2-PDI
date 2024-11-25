@@ -7,5 +7,4 @@ Temas:
 - Converción de espacio
 - Segmentación de imagen por color
 - Detección de contornos
-- Operaciones morfológicas
 - Entrenamiento de modelo de machine learning
