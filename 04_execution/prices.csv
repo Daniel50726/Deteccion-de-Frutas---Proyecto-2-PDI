@@ -1,0 +1,9 @@
+Class,label,prices,weight
+1,fresh_apple,7,180
+2,fresh_banana,4.9,120
+3,fresh_orange,3,170
+4,fresh_tomato,5,220
+5,stale_apple,3.5,180
+6,stale_banana,2.45,120
+7,stale_orange,1.5,170
+8,stale_tomato,2.5,220
