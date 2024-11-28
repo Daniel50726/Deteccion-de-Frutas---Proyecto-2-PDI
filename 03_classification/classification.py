@@ -427,7 +427,7 @@ def plot_grouped_metrics(metrics_dict: dict[str, dict[str, float]]) -> None:
     ax.set_xticks(x + width * (n_metrics - 1) / 2)
     ax.set_xticklabels(db_names)
     ax.legend(title="Metrics", loc="lower center")
-    plt.ylim(30, 100)
+    plt.ylim(70, 100)
 
     plt.show()
 
