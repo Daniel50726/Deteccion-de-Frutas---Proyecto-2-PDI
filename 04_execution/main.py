@@ -7,8 +7,62 @@ import skimage as skim
 import pandas as pd
 import joblib
 from pathlib import Path
-from tkinter import Tk, Canvas, Button, messagebox
+from tkinter import Tk, Canvas, Button, Frame, messagebox, filedialog
 import tkinter as tk
+
+translations = {
+    "fresh_apple": "Manzana Fresca",
+    "fresh_banana": "Banana Fresca",
+    "fresh_orange": "Naranja Fresca",
+    "fresh_tomato": "Tomate Fresco",
+    "stale_apple": "Manzana Dañada",
+    "stale_banana": "Banana Dañada",
+    "stale_orange": "Naranja Dañada",
+    "stale_tomato": "Tomate Dañado",
+}
+
+def segment_fruit(image):
+    # Convertir la imagen a HSV
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    
+    # Definir rangos de colores en el espacio HSV para cada fruta
+    # Rango para banano (amarillo)
+    lower_banana = np.array([20, 80, 80])
+    upper_banana = np.array([255, 255, 255])
+    
+    # Rango para manzana (rojo, verde, amarillo)
+    lower_apple = np.array([0, 50, 50])
+    upper_apple = np.array([255, 255, 255])
+    
+    lower_apple2 = np.array([170, 50, 50])  # (rojo oscuro)
+    upper_apple2 = np.array([255, 255, 255])
+    
+    # Rango para tomate (rojo)
+    lower_tomato = np.array([0, 120, 70])
+    upper_tomato = np.array([255, 255, 255])
+    
+    # Rango para naranja (naranja)
+    lower_orange = np.array([5, 100, 100])
+    upper_orange = np.array([255, 255, 255])
+    
+    # Segmentar por cada fruta
+    mask_banana = cv2.inRange(hsv, lower_banana, upper_banana)
+    mask_apple = cv2.inRange(hsv, lower_apple, upper_apple) | cv2.inRange(hsv, lower_apple2, upper_apple2)
+    mask_tomato = cv2.inRange(hsv, lower_tomato, upper_tomato)
+    mask_orange = cv2.inRange(hsv, lower_orange, upper_orange)
+    
+    # Combinación de todas las máscaras
+    mask_fruit = mask_banana | mask_apple | mask_tomato | mask_orange
+    
+    # Crear una imagen de fondo blanco
+    white_background = np.ones_like(image) * 255
+    
+    # Crear la imagen con fondo blanco donde no hay fruta segmentada
+    final_image = cv2.bitwise_and(image, image, mask=mask_fruit)  # Frutas segmentadas
+    background = cv2.bitwise_and(white_background, white_background, mask=cv2.bitwise_not(mask_fruit))  # Fondo blanco
+    final_image = cv2.add(final_image, background)  # Combinar frutas segmentadas con fondo blanco
+    
+    return final_image, mask_banana, mask_apple, mask_tomato, mask_orange, mask_fruit
 
 # Función para obtener información de la fruta y calcular su precio
 def get_fruit_info(class_number, data):
@@ -20,8 +74,10 @@ def get_fruit_info(class_number, data):
     price_per_gram = fruit_info['prices'].values[0]
     weight = fruit_info['weight'].values[0]
     total_price = price_per_gram * weight
-    return label, total_price
 
+    # Traducir el nombre de la fruta al español
+    label_translated = translations.get(label, label.capitalize())
+    return label_translated, total_price
 
 # Función para mostrar información en la interfaz gráfica
 def display_result(class_number):
@@ -32,27 +88,41 @@ def display_result(class_number):
         fruit_label.config(image="", text="Sin imagen disponible")
         return
 
-    # Mostrar información de la fruta
-    info_label.config(text=f"Fruta: {label}\nPrecio Total: ${total_price:.2f}")
+    # Mostrar información de la fruta traducida
+    info_label.config(text=f"Fruta: {label}\nPrecio Total: ${total_price:.0f} COP")
 
     # Actualizar la imagen de la fruta
     fruit_image = None
-    if "apple" in label:
-        fruit_image = tk.PhotoImage(file="apple.png")
-    elif "banana" in label:
-        fruit_image = tk.PhotoImage(file="banana.png")
-    elif "orange" in label:
-        fruit_image = tk.PhotoImage(file="orange.png")
-    elif "tomato" in label:
-        fruit_image = tk.PhotoImage(file="tomato.png")
+    relative_path = Path('./04_execution/ui_images/')
+    try:
+        if "Manzana Fresca" in label:
+            fruit_image = tk.PhotoImage(file = relative_path / 'apple.png')
+        elif "Banana Fresca" in label:
+            fruit_image = tk.PhotoImage(file = relative_path / 'banana.png')
+        elif "Naranja Fresca" in label:
+            fruit_image = tk.PhotoImage(file = relative_path / 'orange.png')
+        elif "Tomate Fresco" in label:
+            fruit_image = tk.PhotoImage(file = relative_path / 'tomato.png')
+        elif "Manzana Dañada" in label:
+            fruit_image = tk.PhotoImage(file = relative_path / 'staleApple.png')
+        elif "Banana Dañada" in label:
+            fruit_image = tk.PhotoImage(file = relative_path / 'staleBanana.png')
+        elif "Naranja Dañada" in label:
+            fruit_image = tk.PhotoImage(file = relative_path / 'staleOrange.png')
+        elif "Tomate Dañado" in label:
+            fruit_image = tk.PhotoImage(file = relative_path / 'staleTomato.png')
+    except tk.TclError:
+        fruit_image = None  
 
-    # Asignar imagen si existe
     if fruit_image:
         fruit_label.config(image=fruit_image)
         fruit_label.image = fruit_image
     else:
         fruit_label.config(image="", text="Sin imagen disponible")
-
+        
+#-----------------------------------------------------------------------------------
+# Variable global para almacenar la ruta de la imagen seleccionada o capturada
+ruta_imagen = ""
 
 # Función para capturar y guardar la imagen
 def capturar_imagen():
@@ -60,7 +130,7 @@ def capturar_imagen():
     ret, frame = cap.read()
     if ret:
         # Crea la carpeta si no existe
-        folder = "captured_images"
+        folder = Path('./04_execution/captured_images')
         os.makedirs(folder, exist_ok=True)
         
         # Define el nombre del archivo con un índice único
@@ -74,6 +144,20 @@ def capturar_imagen():
         cerrar_programa()
     else:
         messagebox.showerror("Error", "No se pudo capturar la imagen.")
+
+# Función para seleccionar una imagen desde el disco
+def seleccionar_imagen():
+    global ruta_imagen  # Actualiza la variable global con la ruta seleccionada
+    ruta_imagen = filedialog.askopenfilename(
+        title="Seleccionar Imagen",
+        filetypes=[("Archivos de imagen", "*.jpg *.png *.jpeg *.bmp *.tiff *.gif")]
+    )
+    if ruta_imagen:
+        messagebox.showinfo("Imagen seleccionada", f"Se seleccionó la imagen: {ruta_imagen}")
+        ruta_imagen = os.path.relpath(ruta_imagen, os.path.abspath(os.getcwd()))
+        cerrar_programa()
+    else:
+        messagebox.showwarning("Seleccionar Imagen", "No se seleccionó ninguna imagen.")
 
 # Función para mostrar el video en tiempo real
 def mostrar_video():
@@ -93,11 +177,8 @@ def cerrar_programa():
     cap.release()
     ventana.destroy()
 
-# Variable global para almacenar la ruta de la imagen capturada
-ruta_imagen = ""
-
 # Configuración de la cámara
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
 if not cap.isOpened():
     print("Error al abrir la cámara.")
     exit()
@@ -110,15 +191,19 @@ ventana.title("Captura de Imágenes")
 canvas = Canvas(ventana, width=640, height=480)
 canvas.pack()
 
+# Crea un contenedor (Frame) para los botones
+button_frame = Frame(ventana)
+button_frame.pack(pady=10)
+
 # Botón para capturar la imagen
-btn_captura = Button(ventana, text="Capturar Imagen", command=capturar_imagen)
-btn_captura.pack(pady=10)
+btn_capture = Button(button_frame, text="Capturar Imagen", command=capturar_imagen)
+btn_capture.pack(side="left", padx=5)
+
+# Botón para seleccionar una imagen
+btn_select = Button(button_frame, text="Seleccionar Imagen", command=seleccionar_imagen)
+btn_select.pack(side="left", padx=5)
 
 # Configura el cierre del programa
-def cerrar_programa():
-    cap.release()
-    ventana.destroy()
-
 ventana.protocol("WM_DELETE_WINDOW", cerrar_programa)
 
 # Inicia la función para mostrar el video en tiempo real
@@ -127,33 +212,33 @@ mostrar_video()
 # Inicia la interfaz gráfica
 ventana.mainloop()
 
-# Después de capturar la imagen, procesarla
+# Procesar la imagen seleccionada o capturada
+
+print(ruta_imagen)
+
 if ruta_imagen:
     IMG_PATH = Path(ruta_imagen)
 else:
-    print("No se capturó ninguna imagen para procesar.")
-    IMG_PATH = Path("./captured_images/img3.png")
-try:        
+    print("No se seleccionó ni capturó ninguna imagen.")
+    
+try:
     size = (64, 64)
 
-    # Leer la imagen
     img = cv2.imread(str(IMG_PATH))
-
-    # Convertir la imagen a RGB
+    
+    img, mask_banana, mask_apple, mask_tomato, mask_orange, mask_fruit = segment_fruit(img)
+    
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-    # Redimensionar la imagen
     img_resized = cv2.resize(img, size)
 
-    # Obtener las dimensiones originales y redimensionadas
     height, width = img.shape[:2]
     print(f"Dimensiones originales: {width}x{height}")
     print(f"Dimensiones redimensionadas: {img_resized.shape[1]}x{img_resized.shape[0]}")
 except Exception as e:
     print(f"Error al procesar la imagen: {e}")
 
-plt.imshow(img_resized)
-
+#----------------------------------------------------------------------------------------------------
 def get_hog(img, hog_params):
     return skim.feature.hog(img, **hog_params)
 
@@ -227,7 +312,10 @@ def extract_features(img: Path, hog_params, lbp_params, hsv_hist_params):
     )
     
     return features_df
-    
+
+#--------------------------------------------------------------------------------------
+SVM_PATH = Path('03_classification/softmax_results/DB 64×64_best_estimator.pkl')
+SCALER_PATH = Path('03_classification/softmax_results/DB 64×64_scaler.pkl')
 
 HOG_PARAMS = {
     "orientations": 8,
@@ -243,17 +331,12 @@ HSV_HIST_PARAMS = {"bins": 50}
 
 features_df = extract_features(img_resized, HOG_PARAMS, LBP_PARAMS, HSV_HIST_PARAMS)
 
-#features_df.columns = features_df.columns.astype(str)
+features_df.columns = features_df.columns.astype(str)
 
-DF_PATH = Path("./img_features_64.csv")
+DF_PATH = Path("./04_execution/img_features_64.csv")
 features_df.to_csv(DF_PATH)
 
-features_df
-
 # Cargar el modelo SVM y el scaler
-SVM_PATH = Path('../03_classification/ovr_results/DB 64×64_best_estimator.pkl')
-SCALER_PATH = Path('../03_classification/ovr_results/DB 64×64_scaler.pkl')
-
 model = joblib.load(SVM_PATH)
 scaler = joblib.load(SCALER_PATH)
 
@@ -267,10 +350,8 @@ features_scales = scaler.transform(features_np)
 prediccion = model.predict(features_scales)
 print(f"Predicción: {prediccion[0]}")
 
-
-
 # Cargar el archivo CSV
-file_name = "prices.csv"
+file_name = Path("./04_execution/prices.csv")
 try:
     data = pd.read_csv(file_name)
 except FileNotFoundError:
@@ -295,5 +376,3 @@ display_result(class_number)
 
 # Iniciar la interfaz gráfica
 root.mainloop()
-
-
