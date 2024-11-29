@@ -163,9 +163,11 @@ def seleccionar_imagen():
 def mostrar_video():
     global cap, canvas
     ret, frame = cap.read()
+    
     if ret:
+        frame_resized = cv2.resize(frame, (640, 480))
         # Convierte el frame a un formato compatible con Tkinter
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frame_rgb = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)
         img = ImageTk.PhotoImage(image=Image.fromarray(frame_rgb))
         canvas.create_image(0, 0, anchor="nw", image=img)
         canvas.image = img  # Mantener referencia para evitar que la imagen sea eliminada
@@ -179,6 +181,11 @@ def cerrar_programa():
 
 # Configuración de la cámara
 cap = cv2.VideoCapture(1)
+
+# Obtiene el ancho y alto de la resolución de la cámara
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+
 if not cap.isOpened():
     print("Error al abrir la cámara.")
     exit()
