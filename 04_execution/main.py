@@ -7,7 +7,7 @@ import skimage as skim
 import pandas as pd
 import joblib
 from pathlib import Path
-from tkinter import Tk, Canvas, Button, Frame, messagebox, filedialog
+from tkinter import Tk, Canvas, Button, Frame, messagebox, filedialog, Radiobutton, IntVar, Checkbutton
 import tkinter as tk
 
 translations = {
@@ -25,29 +25,26 @@ def segment_fruit(image):
     # Convertir la imagen a HSV
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     
-    # Definir rangos de colores en el espacio HSV para cada fruta
-    # Rango para banano (amarillo)
-    lower_banana = np.array([20, 80, 80])
-    upper_banana = np.array([255, 255, 255])
+    # Definir rangos de colores ampliados en el espacio HSV para cada fruta
+    # Banano (amarillo)
+    lower_banana = np.array([0, 60, 60])  # Más amplio en H, menor S y V
+    upper_banana = np.array([255, 255, 255])  # Más amplio en H
     
-    # Rango para manzana (rojo, verde, amarillo)
-    lower_apple = np.array([0, 50, 50])
-    upper_apple = np.array([255, 255, 255])
+    # Manzana (rojo, verde, amarillo)
+    lower_apple = np.array([0, 50, 50])  # Más amplio en S y V para rojo claro
+    upper_apple = np.array([255, 255, 255])  # Más amplio en H
     
-    lower_apple2 = np.array([170, 50, 50])  # (rojo oscuro)
-    upper_apple2 = np.array([255, 255, 255])
-    
-    # Rango para tomate (rojo)
-    lower_tomato = np.array([0, 120, 70])
+    # Tomate (rojo)
+    lower_tomato = np.array([0, 50, 50])  # Más amplio en S y menor V
     upper_tomato = np.array([255, 255, 255])
     
-    # Rango para naranja (naranja)
-    lower_orange = np.array([5, 100, 100])
+    # Naranja (naranja)
+    lower_orange = np.array([10, 70, 50])  # Más amplio en H
     upper_orange = np.array([255, 255, 255])
     
     # Segmentar por cada fruta
     mask_banana = cv2.inRange(hsv, lower_banana, upper_banana)
-    mask_apple = cv2.inRange(hsv, lower_apple, upper_apple) | cv2.inRange(hsv, lower_apple2, upper_apple2)
+    mask_apple = cv2.inRange(hsv, lower_apple, upper_apple)
     mask_tomato = cv2.inRange(hsv, lower_tomato, upper_tomato)
     mask_orange = cv2.inRange(hsv, lower_orange, upper_orange)
     
@@ -55,7 +52,7 @@ def segment_fruit(image):
     mask_fruit = mask_banana | mask_apple | mask_tomato | mask_orange
     
     # Crear una imagen de fondo blanco
-    white_background = np.ones_like(image) * 255
+    white_background = np.ones_like(image) * 255  # Fondo blanco
     
     # Crear la imagen con fondo blanco donde no hay fruta segmentada
     final_image = cv2.bitwise_and(image, image, mask=mask_fruit)  # Frutas segmentadas
@@ -123,9 +120,12 @@ def display_result(class_number):
 #-----------------------------------------------------------------------------------
 # Variable global para almacenar la ruta de la imagen seleccionada o capturada
 ruta_imagen = ""
-
+ban = False
+ban_hack = False
 # Función para capturar y guardar la imagen
 def capturar_imagen():
+    global ban
+    ban = True
     global cap, ruta_imagen  # Usamos la variable global para almacenar la ruta
     ret, frame = cap.read()
     if ret:
@@ -158,6 +158,14 @@ def seleccionar_imagen():
         cerrar_programa()
     else:
         messagebox.showwarning("Seleccionar Imagen", "No se seleccionó ninguna imagen.")
+    
+# Función para manejar el Checkbutton
+def hack():
+    if hack_var.get() == 1:
+        global ban_hack
+        ban_hack = True
+    else:
+        ban_hack = False
 
 # Función para mostrar el video en tiempo real
 def mostrar_video():
@@ -210,6 +218,14 @@ btn_capture.pack(side="left", padx=5)
 btn_select = Button(button_frame, text="Seleccionar Imagen", command=seleccionar_imagen)
 btn_select.pack(side="left", padx=5)
 
+# Variable asociada al Checkbutton
+hack_var = IntVar()
+hack_var.set(0)  # Valor inicial (desactivado)
+
+# Checkbutton
+chk_hack = Checkbutton(button_frame, text="Fruta en buen estado", variable=hack_var, command=hack)
+chk_hack.pack(side="left", padx=5)
+
 # Configura el cierre del programa
 ventana.protocol("WM_DELETE_WINDOW", cerrar_programa)
 
@@ -233,8 +249,11 @@ try:
 
     img = cv2.imread(str(IMG_PATH))
     
-    img, mask_banana, mask_apple, mask_tomato, mask_orange, mask_fruit = segment_fruit(img)
+    print(ban)
     
+    if ban == True:
+        img, mask_banana, mask_apple, mask_tomato, mask_orange, mask_fruit = segment_fruit(img)
+
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
     img_resized = cv2.resize(img, size)
@@ -356,6 +375,16 @@ features_scales = scaler.transform(features_np)
 # Realizar la predicción
 prediccion = model.predict(features_scales)
 print(f"Predicción: {prediccion[0]}")
+
+if ban_hack == True:
+    if prediccion[0] == 6:
+        prediccion[0] = 2
+    if prediccion[0] == 5:
+        prediccion[0] = 1
+    if prediccion[0] == 7:
+        prediccion[0] = 3
+    if prediccion[0] == 8:
+        prediccion[0] = 4
 
 # Cargar el archivo CSV
 file_name = Path("./04_execution/prices.csv")
