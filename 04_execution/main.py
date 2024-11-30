@@ -7,7 +7,7 @@ import skimage as skim
 import pandas as pd
 import joblib
 from pathlib import Path
-from tkinter import Tk, Canvas, Button, Frame, messagebox, filedialog, Radiobutton, IntVar, Checkbutton
+from tkinter import Tk, Canvas, Button, Frame, messagebox, filedialog, IntVar, Checkbutton
 import tkinter as tk
 
 translations = {
@@ -188,7 +188,7 @@ def cerrar_programa():
     ventana.destroy()
 
 # Configuración de la cámara
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
 
 # Obtiene el ancho y alto de la resolución de la cámara
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
@@ -237,8 +237,6 @@ ventana.mainloop()
 
 # Procesar la imagen seleccionada o capturada
 
-print(ruta_imagen)
-
 if ruta_imagen:
     IMG_PATH = Path(ruta_imagen)
 else:
@@ -248,10 +246,9 @@ try:
     size = (64, 64)
 
     img = cv2.imread(str(IMG_PATH))
-    
-    print(ban)
-    
+        
     if ban == True:
+        print('SE APLICÓ MÁSCARA')
         img, mask_banana, mask_apple, mask_tomato, mask_orange, mask_fruit = segment_fruit(img)
 
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -259,8 +256,8 @@ try:
     img_resized = cv2.resize(img, size)
 
     height, width = img.shape[:2]
-    print(f"Dimensiones originales: {width}x{height}")
-    print(f"Dimensiones redimensionadas: {img_resized.shape[1]}x{img_resized.shape[0]}")
+    #print(f"Dimensiones originales: {width}x{height}")
+    #print(f"Dimensiones redimensionadas: {img_resized.shape[1]}x{img_resized.shape[0]}")
 except Exception as e:
     print(f"Error al procesar la imagen: {e}")
 
@@ -374,7 +371,6 @@ features_scales = scaler.transform(features_np)
 
 # Realizar la predicción
 prediccion = model.predict(features_scales)
-print(f"Predicción: {prediccion[0]}")
 
 if ban_hack == True:
     if prediccion[0] == 6:

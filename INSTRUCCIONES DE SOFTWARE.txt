@@ -1,0 +1,14 @@
+---------------------- INSTRUCCIONES DE SOFTWARE ----------------------------
+
+En la carpeta 'captured_images' se encuentran dos tipos de imágenes:
+- 'img_input_[x]' que corresponden a imágenes capturadas previamente.
+- 'mod[x]' que corresponden a imágenes propias del entrenamiento del modelo.
+-----------------------------------------------------------------------------
+
+1. Clonar repositorio de GitHub
+   (Importante no ejecutar ningún archivo de 01_preprocessing, 02_features, 03_classification)
+2. Ejecutar main.py
+   (Es importante que si se quiere usar la función de capturar, hay que tener condiciones de luz
+    óptimas para tener los resultados esperados por parte de la predicción del modelo.)
+3. Cerrar la pestaña 'Fruta Info' que contiene el resultado de la predicción con el cálculo
+   del precio total.
